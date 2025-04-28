@@ -5,6 +5,7 @@ import type {
     PageStream,
     PageAsync,
     PageSync,
+    LayoutSync,
 } from "~/stack/types.ts";
 import { safeTry } from "~/utils/index.ts";
 import fastJson from "fast-json-stringify";
@@ -59,10 +60,14 @@ const transformStream = (fastify: FastifyInstance, payload: any): string => {
 export const registerSyncPage = (
     fastify: FastifyInstance,
     info: Directory,
-    layoutHandler: Layout | null
+    layoutHandler: LayoutSync | null
 ) => {
     if (info.page?.handlerType !== 'sync') {
         fastify.log.error(`[ERROR] Page handler type is not synchronous`);
+        return;
+    }
+    if (info.layout && info.layout.handlerType !== 'sync') {
+        fastify.log.error(`[ERROR] Cannot create synchronous route for '${info.uri}'. Change the Layout to be synchronous or change the Page to be asynchronous`);
         return;
     }
 

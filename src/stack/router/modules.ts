@@ -6,8 +6,19 @@ import type {
     PageAsync,
     PageStream,
     PageSync,
-    PageModule,
+    PageModule, LayoutAsync, LayoutSync,
 } from "~/stack/types.ts";
+
+const getLayoutInfo = (handler: Function) => {
+    const str = handler.toString();
+
+    const asyncRegex = /^\s*(async)(?=\s*(?:function\b|\(|[A-Za-z_$]))/gm;
+    const isAsync = asyncRegex.test(str);
+
+    return {
+        handlerType: isAsync ? 'async' : 'sync',
+    }
+}
 
 /** Gets Layout properties from an ES Module object. */
 export const getLayoutFromModule = (module: unknown): LayoutModule | null => {
@@ -15,8 +26,12 @@ export const getLayoutFromModule = (module: unknown): LayoutModule | null => {
         return null;
     }
 
-    const result: LayoutModule = {
+    const result: {
+        handler: Function | null,
+        handlerType: string,
+    } = {
         handler: null,
+        handlerType: 'sync',
     }
 
     // exported default function
@@ -36,10 +51,18 @@ export const getLayoutFromModule = (module: unknown): LayoutModule | null => {
         return null;
     }
 
-    return result;
+    const info = getLayoutInfo(result.handler);
+
+    return info.handlerType === 'async' ? {
+        handler: result.handler as LayoutAsync,
+        handlerType: 'async',
+    } : {
+        handler: result.handler as LayoutSync,
+        handlerType: 'sync',
+    }
 }
 
-const getPageHandlerInfo = (handler: Function) => {
+const getPageInfo = (handler: Function) => {
     const str = handler.toString();
 
     let handlerType = 'sync';
@@ -102,7 +125,7 @@ export const getPageFromModule = (module: unknown): PageModule | null => {
         return null;
     }
 
-    const handlerInfo = getPageHandlerInfo(result.handler);
+    const handlerInfo = getPageInfo(result.handler);
     if (!handlerInfo) {
         return null;
     }

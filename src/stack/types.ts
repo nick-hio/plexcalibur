@@ -49,10 +49,20 @@ export type Layout =
     | LayoutSync
     | LayoutAsync;
 
-/** Module from a `layout.ts` file. */
-export type LayoutModule = {
-    handler: Layout | null,
+export type LayoutModuleSync = {
+    handler: LayoutSync | null,
+    handlerType: 'sync',
 }
+
+export type LayoutModuleAsync = {
+    handler: Layout | null,
+    handlerType: 'async',
+}
+
+/** Module from a `layout.ts` file. */
+export type LayoutModule =
+    | LayoutModuleSync
+    | LayoutModuleAsync;
 
 /*
  * ~~~ Page Types ~~~

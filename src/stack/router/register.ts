@@ -1,29 +1,29 @@
 import type { FastifyInstance } from "fastify";
-import type { Layout, Directory } from "~/stack/types.ts";
+import type {Layout, Directory, LayoutSync} from "~/stack/types.ts";
 import { registerSyncPage, registerAsyncPage, registerStreamPage } from "~/stack/router/register-page.ts";
 import { registerApi } from "~/stack/router/register-api.ts";
 
 /** Registers a directory's **Page** and **API** routes. */
 export const registerDirectory = (
     fastify: FastifyInstance,
-    info: Directory,
+    directory: Directory,
     layout: Layout | null = null,
 ): void => {
-    const layoutHandler = info.layout?.handler ?? layout;
+    const layoutHandler = directory.layout?.handler ?? layout;
 
-    if (info.page) {
-        if (info.page.handlerType === 'sync') {
-            registerSyncPage(fastify, info, layoutHandler);
+    if (directory.page) {
+        if (directory.page.handlerType === 'sync') {
+            registerSyncPage(fastify, directory, layoutHandler as LayoutSync);
         }
-        else if (info.page.handlerType === 'async') {
-            registerAsyncPage(fastify, info, layoutHandler);
+        else if (directory.page.handlerType === 'async') {
+            registerAsyncPage(fastify, directory, layoutHandler);
         }
-        else if (info.page.handlerType === 'stream') {
-            registerStreamPage(fastify, info, layoutHandler);
+        else if (directory.page.handlerType === 'stream') {
+            registerStreamPage(fastify, directory, layoutHandler);
         }
     }
 
-    if (info.api) {
-        registerApi(fastify, info);
+    if (directory.api) {
+        registerApi(fastify, directory);
     }
 }
