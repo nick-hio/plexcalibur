@@ -74,6 +74,7 @@ export type PageCallbackOptions = {
     status?: number,
     type?: string,
     headers?: Record<string, string>,
+    encoding?: BufferEncoding,
 }
 
 export type PageSync<

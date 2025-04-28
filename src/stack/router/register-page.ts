@@ -15,7 +15,10 @@ type PageResponse = {
     headers: Record<string, string>,
     type: string,
     content: string,
+    encoding: BufferEncoding,
 }
+
+const stringify = fastJson({});
 
 const transformPayload = (fastify: FastifyInstance, payload: any, response: PageResponse): string => {
     if (!payload) {
@@ -25,12 +28,16 @@ const transformPayload = (fastify: FastifyInstance, payload: any, response: Page
     if (typeof payload === 'string') {
         return payload;
     } else {
-        const [err, str] = safeTry<string>(fastJson, payload);
+        const [err, str] = safeTry<string>(stringify, payload);
         if (err) {
             response.status = 500;
             fastify.log.error(`[ERROR] Error occurred while parsing the response payload: ${err}`);
         } else {
             response.type = 'application/json';
+            response.headers = {
+                ...response.headers,
+                'Content-Type': `${response.type}; charset=${response.encoding || 'utf-8'}`,
+            }
             return str;
         }
     }
@@ -46,7 +53,7 @@ const transformStream = (fastify: FastifyInstance, payload: any): string => {
     if (typeof payload === 'string') {
         return payload;
     } else {
-        const [err, str] = safeTry<string>(fastJson, payload);
+        const [err, str] = safeTry<string>(stringify, payload);
         if (err) {
             fastify.log.error(`[ERROR] Error occurred while parsing the stream data: ${err}`);
         } else {
@@ -60,7 +67,7 @@ const transformStream = (fastify: FastifyInstance, payload: any): string => {
 export const registerSyncPage = (
     fastify: FastifyInstance,
     info: Directory,
-    layoutHandler: LayoutSync | null
+    layoutHandler: LayoutSync | null,
 ) => {
     if (info.page?.handlerType !== 'sync') {
         fastify.log.error(`[ERROR] Page handler type is not synchronous`);
@@ -77,22 +84,33 @@ export const registerSyncPage = (
         handler: (request, reply) => {
             const response: PageResponse = {
                 status: 200,
-                headers: {},
+                headers: {
+                    'Content-Type': 'text/html; charset=utf-8',
+                },
                 type: 'text/html',
                 content: '',
+                encoding: 'utf-8'
             };
 
             (info.page!.handler as PageSync)({
                 send: (payload, options) => {
                     response.status = options?.status || 200;
                     response.type = options?.type || 'text/html';
-                    response.headers = options?.headers || {};
+                    response.encoding = options?.encoding || 'utf-8';
+                    response.headers = {
+                        'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
+                        ...options?.headers,
+                    };
                     response.content = transformPayload(fastify, payload, response);
                 },
                 error: (payload, options) => {
-                    response.status = options?.status || 404;
+                    response.status = options?.status || 400;
                     response.type = options?.type || 'text/plain';
-                    response.headers = options?.headers || {};
+                    response.encoding = options?.encoding || 'utf-8';
+                    response.headers = {
+                        'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
+                        ...options?.headers,
+                    };
                     response.content = transformPayload(fastify, payload, response);
                 },
                 req: request,
@@ -101,12 +119,21 @@ export const registerSyncPage = (
 
             // Error response
             if (response.status >= 400) {
-                return reply.type(response.type || 'text/plain').code(response.status).headers(response.headers || {}).send(response.content);
+                console.log('[ERROR] Error response:', response);
+                reply.code(response.status).headers(response.headers).send(response.content);
+                return;
             }
 
             // Success response
-            const payload = layoutHandler ? layoutHandler({ page: response.content, req: request, res: reply }) : response.content;
-            return reply.type(response.type || 'text/html').code(response.status || 200).headers(response.headers || {}).send(payload);
+            const payload = layoutHandler
+                ? layoutHandler({
+                    page: response.content,
+                    req: request,
+                    res: reply,
+                })
+                : response.content;
+
+            reply.code(response.status).headers(response.headers).send(payload);
         }
     });
 
@@ -132,19 +159,28 @@ export const registerAsyncPage = (
                 headers: {},
                 type: 'text/html',
                 content: '',
-            };
+                encoding: 'utf-8',
+            }
 
             await (info.page!.handler as PageAsync)({
                 send: (payload, options) => {
                     response.status = options?.status || 200;
                     response.type = options?.type || 'text/html';
-                    response.headers = options?.headers || {};
+                    response.encoding = options?.encoding || 'utf-8';
+                    response.headers = {
+                        'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
+                        ...options?.headers,
+                    };
                     response.content = transformPayload(fastify, payload, response);
                 },
                 error: (payload, options) => {
-                    response.status = options?.status || 404;
+                    response.status = options?.status || 400;
                     response.type = options?.type || 'text/plain';
-                    response.headers = options?.headers || {};
+                    response.encoding = options?.encoding || 'utf-8';
+                    response.headers = {
+                        'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
+                        ...options?.headers,
+                    };
                     response.content = transformPayload(fastify, payload, response);
                 },
                 req: request,
@@ -153,12 +189,19 @@ export const registerAsyncPage = (
 
             // Error response
             if (response.status >= 400) {
-                return reply.type(response.type || 'text/plain').code(response.status).headers(response.headers || {}).send(response.content);
+                return reply.code(response.status).headers(response.headers).send(response.content);
             }
 
             // Success response
-            const payload = layoutHandler ? await layoutHandler({page: response.content, req: request, res: reply}) : response.content;
-            return reply.type(response.type || 'text/html').code(response.status || 200).headers(response.headers || {}).send(payload);
+            const payload = layoutHandler
+                ? await layoutHandler({
+                    page: response.content,
+                    req: request,
+                    res: reply
+                })
+                : response.content;
+
+            return reply.code(response.status || 200).headers(response.headers).send(payload);
         }
     });
 
