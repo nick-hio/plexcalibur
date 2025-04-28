@@ -1,7 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import type {Layout, Directory, LayoutSync} from "~/stack/types.ts";
-import { registerSyncPage, registerAsyncPage, registerStreamPage } from "~/stack/router/register-page.ts";
-import { registerApi } from "~/stack/router/register-api.ts";
+import type { Layout, Directory, LayoutSync } from "~/stack/types.ts";
+import { registerSyncPage } from "./register-page-sync.ts";
+import { registerAsyncPage} from "./register-page-async.ts";
+import { registerStreamPage } from "./register-page-stream.ts";
+import { registerApi } from "./register-api.ts";
 
 /** Registers a directory's **Page** and **API** routes. */
 export const registerDirectory = (

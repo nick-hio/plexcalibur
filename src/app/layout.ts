@@ -2,6 +2,7 @@ import type { Layout } from "~/stack/types.ts";
 
 export const layout: Layout = ({ page }) => {
     return `
+        <!DOCTYPE html>
         <html lang="en">
             <head>
                 <meta charset="UTF-8">

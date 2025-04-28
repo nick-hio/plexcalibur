@@ -70,6 +70,15 @@ export type LayoutModule =
 
 export type PageType = 'sync' | 'async' | 'stream';
 
+/** Utility type. */
+export type PageResponse = {
+    status: number,
+    headers: Record<string, string>,
+    type: string,
+    content: string,
+    encoding: BufferEncoding,
+}
+
 export type PageCallbackOptions = {
     status?: number,
     type?: string,
