@@ -117,7 +117,6 @@ export type PageAsync<
 }) => Promise<void>;
 
 export type StreamCallbackOptions = {
-    status?: number,
     type?: string,
     headers?: Record<string, string>,
     encoding?: BufferEncoding,
@@ -127,11 +126,13 @@ export type PageStream<
     Req = FastifyRequest,
     Res = FastifyReply,
 > = ({
+    set,
     stream,
     end,
     req,
     res,
 }: {
+    set: (options: StreamCallbackOptions) => void,
     stream: (payload: string | Record<any, any>, options?: StreamCallbackOptions) => void,
     end: (payload?: string | Record<any, any>) => void,
     req: Req,

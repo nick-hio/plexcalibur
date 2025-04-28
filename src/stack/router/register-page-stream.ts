@@ -1,15 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import type {
-    Layout,
-    Directory,
-    PageStream,
-} from "~/stack/types.ts";
+import type { Directory, PageStream, StreamCallbackOptions } from "~/stack/types.ts";
 import { transformStream } from "./transform.ts";
+import { Readable } from "stream";
 
 export const registerStreamPage = (
     fastify: FastifyInstance,
     info: Directory,
-    layoutHandler: Layout | null,
 ) => {
     if (info.page?.handlerType !== 'stream') {
         fastify.log.error(`[ERROR] Page handler type is not stream`);
@@ -20,41 +16,66 @@ export const registerStreamPage = (
         method: info.page.method,
         url: info.uri,
         handler: async (request, reply) => {
+            const readableStream = new Readable();
+            readableStream._read = () => {};
+
+            const response: StreamCallbackOptions = {
+                type: 'text/html',
+                headers: {},
+                encoding: 'utf-8',
+            }
+
             let isStreaming = false;
             let hasEndedStream = false;
             let totalBytes = 0;
 
             await (info.page!.handler as PageStream)({
-                stream: (payload, options) => {
-                    // Check if stream has ended
+                set: (options) => {
                     if (hasEndedStream) {
-                        fastify.log.warn(`[ERROR] Cannot stream data after connection has ended.`);
+                        fastify.log.warn(`[WARN] Cannot set headers after connection has ended.`);
+                        return;
+                    }
+                    if (isStreaming) {
+                        fastify.log.warn(`[WARN] Stream options are only applicable with the first invocation of 'stream'.`);
                         return;
                     }
 
-                    // Start stream if not already started
-                    if (!isStreaming && !hasEndedStream) {
-                        reply.raw.writeHead(options?.status || 200, {
-                            'Content-Type': `${options?.type || 'text/html'}; charset=${options?.encoding || 'utf-8'}`,
-                            'X-Content-Type-Options': 'nosniff',
-                            'Connection': 'keep-alive',
-                            ...options?.headers,
-                        });
+                    if (options.headers) {
+                        response.headers = options.headers;
+                    }
+                    if (options.type) {
+                        response.type = options.type;
+                        response.headers = {
+                            ...response.headers,
+                            'Content-Type': `${options.type}; charset=${response.encoding}`,
+                        }
+                    }
+                    if (options.encoding) {
+                        response.encoding = options.encoding;
+                    }
+                },
+                stream: (payload, options) => {
+                    if (hasEndedStream) {
+                        fastify.log.warn(`[WARN] Cannot stream data after connection has ended.`);
+                        return;
+                    }
+                    if (isStreaming && options) {
+                        fastify.log.warn(`[WARN] Stream options are only applicable with the first invocation of 'stream'.`);
+                    }
+
+                    if (!isStreaming) {
+                        reply.header('Content-Type', `${options?.type || 'text/html'}; charset=${options?.encoding || 'utf-8'}`);
+                        reply.send(readableStream);
+                        response.encoding = options?.encoding || 'utf-8';
                         isStreaming = true;
                     }
 
-                    // Implement layout handler (?)
                     const data = transformStream(fastify, payload);
                     const bytes = Buffer.byteLength(data, 'utf-8');
                     totalBytes += bytes;
 
-                    reply.raw.write(data, (err) => {
-                        if (err) {
-                            fastify.log.error(`[ERROR] Error while streaming ${bytes} bytes of data: ${err}`);
-                        } else {
-                            fastify.log.debug(`Streamed ${bytes} bytes of data`);
-                        }
-                    });
+                    readableStream.push(data, response.encoding);
+                    fastify.log.debug(`Streamed ${bytes} bytes of data`);
                 },
                 end: (payload) => {
                     if (!isStreaming) {
@@ -71,17 +92,17 @@ export const registerStreamPage = (
 
                     if (payload) {
                         const data = transformStream(fastify, payload);
-                        const bytes = Buffer.byteLength(data, 'utf-8');
+                        const bytes = Buffer.byteLength(data, response.encoding);
                         totalBytes += bytes;
 
-                        reply.raw.end(data, () => {
-                            fastify.log.debug(`Streamed ${bytes} bytes of data`);
-                            fastify.log.debug(`Stream ended after ${totalBytes} bytes of data`);
-                        });
+                        readableStream.push(data, response.encoding);
+                        readableStream.push(null);
+
+                        fastify.log.debug(`Streamed ${bytes} bytes of data`);
+                        fastify.log.debug(`Stream ended after ${totalBytes} bytes of data`);
                     } else {
-                        reply.raw.end(() => {
-                            fastify.log.debug(`Stream ended after ${totalBytes} bytes of data`);
-                        });
+                        readableStream.push(null);
+                        fastify.log.debug(`Stream ended after ${totalBytes} bytes of data`);
                     }
                 },
                 req: request,
@@ -89,9 +110,8 @@ export const registerStreamPage = (
             });
 
             if (isStreaming && !hasEndedStream) {
-                reply.raw.end(() => {
-                    fastify.log.debug(`Stream ended after ${totalBytes} bytes of data`);
-                })
+                readableStream.push(null);
+                fastify.log.debug(`Stream ended after ${totalBytes} bytes of data`);
             }
         }
     });

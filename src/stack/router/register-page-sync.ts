@@ -71,7 +71,7 @@ export const registerSyncPage = (
                         'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
                         ...options?.headers,
                     };
-                    response.content = transformPayload(fastify, payload, response);
+                    response.content = transformPayload(fastify, payload, response, options?.type);
 
                     const wrapped = wrapPageSync({
                         req: request,

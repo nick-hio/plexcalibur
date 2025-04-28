@@ -5,7 +5,7 @@ import fastJson from "fast-json-stringify";
 
 const stringify = fastJson({});
 
-export const transformPayload = (fastify: FastifyInstance, payload: any, response: PageResponse): string => {
+export const transformPayload = (fastify: FastifyInstance, payload: any, response: PageResponse, type?: string): string => {
     if (!payload) {
         return '';
     }
@@ -18,7 +18,7 @@ export const transformPayload = (fastify: FastifyInstance, payload: any, respons
             response.status = 500;
             fastify.log.error(`[ERROR] Error occurred while parsing the response payload: ${err}`);
         } else {
-            response.type = 'application/json';
+            response.type = type || 'application/json';
             response.headers = {
                 ...response.headers,
                 'Content-Type': `${response.type}; charset=${response.encoding || 'utf-8'}`,
