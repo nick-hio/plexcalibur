@@ -125,7 +125,7 @@ export const registerSyncPage = (
             }
 
             // Success response
-            const payload = layoutHandler
+            const payload = layoutHandler && response.type.startsWith('text')
                 ? layoutHandler({
                     page: response.content,
                     req: request,
@@ -193,7 +193,7 @@ export const registerAsyncPage = (
             }
 
             // Success response
-            const payload = layoutHandler
+            const payload = layoutHandler && response.type.startsWith('text')
                 ? await layoutHandler({
                     page: response.content,
                     req: request,
