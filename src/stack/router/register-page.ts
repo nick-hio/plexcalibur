@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type {FastifyInstance, FastifyReply, FastifyRequest} from "fastify";
 import type {
     Layout,
     Directory,
@@ -64,6 +64,43 @@ const transformStream = (fastify: FastifyInstance, payload: any): string => {
     return '';
 }
 
+const wrapPageSync = ({
+    req,
+    res,
+    type,
+    layoutHandler,
+    page,
+}: {
+    req: FastifyRequest,
+    res: FastifyReply,
+    type: string,
+    layoutHandler: LayoutSync | null,
+    page: string,
+}): string => {
+    return layoutHandler && type.startsWith('text')
+        ? layoutHandler({page, req, res})
+        : page;
+}
+
+
+const wrapPageAsync = async ({
+    req,
+    res,
+    type,
+    layoutHandler,
+    page,
+}: {
+    req: FastifyRequest,
+    res: FastifyReply,
+    type: string,
+    layoutHandler: Layout | null,
+    page: string,
+}): Promise<string> => {
+    return layoutHandler && type.startsWith('text')
+        ? await layoutHandler({page, req, res})
+        : page;
+}
+
 export const registerSyncPage = (
     fastify: FastifyInstance,
     info: Directory,
@@ -74,7 +111,7 @@ export const registerSyncPage = (
         return;
     }
     if (info.layout && info.layout.handlerType !== 'sync') {
-        fastify.log.error(`[ERROR] Cannot create synchronous route for '${info.uri}'. Change the Layout to be synchronous or change the Page to be asynchronous`);
+        fastify.log.error(`[ERROR] Cannot create route for '${info.uri}'. Change the Layout to be synchronous or change the Page to be asynchronous`);
         return;
     }
 
@@ -92,8 +129,15 @@ export const registerSyncPage = (
                 encoding: 'utf-8'
             };
 
+            let hasSent = false;
+
             (info.page!.handler as PageSync)({
                 send: (payload, options) => {
+                    if (hasSent) {
+                        fastify.log.warn(`[ERROR] Cannot send response multiple times.`);
+                        return;
+                    }
+
                     response.status = options?.status || 200;
                     response.type = options?.type || 'text/html';
                     response.encoding = options?.encoding || 'utf-8';
@@ -102,8 +146,24 @@ export const registerSyncPage = (
                         ...options?.headers,
                     };
                     response.content = transformPayload(fastify, payload, response);
+
+                    const wrapped = wrapPageSync({
+                        req: request,
+                        res: reply,
+                        type: response.type,
+                        layoutHandler,
+                        page: response.content,
+                    })
+                    reply.code(response.status).headers(response.headers).send(wrapped);
+
+                    hasSent = true;
                 },
                 error: (payload, options) => {
+                    if (hasSent) {
+                        fastify.log.warn(`[ERROR] Cannot send response multiple times.`);
+                        return;
+                    }
+
                     response.status = options?.status || 400;
                     response.type = options?.type || 'text/plain';
                     response.encoding = options?.encoding || 'utf-8';
@@ -112,28 +172,41 @@ export const registerSyncPage = (
                         ...options?.headers,
                     };
                     response.content = transformPayload(fastify, payload, response);
+
+                    const wrapped = wrapPageSync({
+                        req: request,
+                        res: reply,
+                        type: response.type,
+                        layoutHandler,
+                        page: response.content,
+                    })
+                    reply.code(response.status).headers(response.headers).send(wrapped);
+
+                    hasSent = true;
                 },
                 req: request,
                 res: reply,
             });
 
+            if (hasSent) {
+                return;
+            }
+
             // Error response
             if (response.status >= 400) {
-                console.log('[ERROR] Error response:', response);
                 reply.code(response.status).headers(response.headers).send(response.content);
                 return;
             }
 
             // Success response
-            const payload = layoutHandler && response.type.startsWith('text')
-                ? layoutHandler({
-                    page: response.content,
-                    req: request,
-                    res: reply,
-                })
-                : response.content;
-
-            reply.code(response.status).headers(response.headers).send(payload);
+            const wrapped = wrapPageSync({
+                req: request,
+                res: reply,
+                type: response.type,
+                layoutHandler,
+                page: response.content,
+            });
+            reply.code(response.status).headers(response.headers).send(wrapped);
         }
     });
 
