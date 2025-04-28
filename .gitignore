@@ -1,0 +1,17 @@
+# files
+
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+*.db
+
+TODO.md
+
+# directories
+
+dist/
+.idea/
+.vscode/
+node_modules/
