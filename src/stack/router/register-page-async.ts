@@ -1,41 +1,17 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { transformPayload } from "./transform.ts";
 import type {
-    Layout,
     Directory,
     PageAsync,
-    PageResponse, PageCallbackOptions, LayoutSync,
+    PageResponse, LayoutSync, LayoutAsync,
 } from "~/stack/types.ts";
-
-const applyOptions = (
-    fastify: FastifyInstance,
-    response: PageResponse,
-    payload: string | Record<any, any>,
-    options: PageCallbackOptions & {
-        defaults: {
-            status: number,
-            type: string,
-        }
-    },
-): PageResponse => {
-    response.status = options?.status || options.defaults.status;
-    response.type = options?.type || options.defaults.type;
-    response.encoding = options?.encoding || 'utf-8';
-    response.headers = {
-        'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
-        ...options?.headers,
-    };
-    response.content = transformPayload(fastify, payload, response, options?.type);
-
-    return response;
-}
+import { applyOptions } from './register-page-sync.ts';
 
 const wrapPage = async (
     req: FastifyRequest,
     res: FastifyReply,
     type: string,
     page: string,
-    layout?: Layout | null
+    layout: LayoutSync | LayoutAsync | null
 ): Promise<string> => {
     return layout && type.startsWith('text')
         ? await layout({ page, req, res })
@@ -44,17 +20,17 @@ const wrapPage = async (
 
 export const registerAsyncPage = (
     fastify: FastifyInstance,
-    info: Directory,
-    layoutHandler: Layout | null
+    directory: Directory,
+    layoutHandler: LayoutAsync | LayoutSync | null
 ) => {
-    if (info.page?.handlerType !== 'async') {
-        fastify.log.error(`[ERROR] Page handler type is not asynchronous`);
+    if (directory.page?.handlerType !== 'async') {
+        fastify.log.error(`[ERROR] Critical error while creating async '${directory.uri}' page.`);
         return;
     }
 
     fastify.route({
-        method: info.page.method,
-        url: info.uri,
+        method: directory.page.method,
+        url: directory.uri,
         handler: async (request, reply) => {
             const response: PageResponse = {
                 status: 200,
@@ -68,7 +44,7 @@ export const registerAsyncPage = (
 
             let hasSent = false;
 
-            await (info.page!.handler as PageAsync)({
+            await (directory.page!.handler as PageAsync)({
                 req: request,
                 res: reply,
                 send: async (payload, options) => {
@@ -126,5 +102,5 @@ export const registerAsyncPage = (
         }
     });
 
-    fastify.log.debug(`Router_PageRoute(Async)=${info.uri}`);
+    fastify.log.debug(`Router_PageRoute(Async)=${directory.uri}`);
 }

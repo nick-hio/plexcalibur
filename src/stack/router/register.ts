@@ -21,7 +21,7 @@ export const registerDirectory = (
             registerAsyncPage(fastify, directory, layoutHandler);
         }
         else if (directory.page.handlerType === 'stream') {
-            registerStreamPage(fastify, directory, layoutHandler);
+            registerStreamPage(fastify, directory);
         }
     }
 

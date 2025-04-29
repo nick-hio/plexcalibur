@@ -5,16 +5,16 @@ import { Readable } from "stream";
 
 export const registerStreamPage = (
     fastify: FastifyInstance,
-    info: Directory,
+    directory: Directory,
 ) => {
-    if (info.page?.handlerType !== 'stream') {
-        fastify.log.error(`[ERROR] Page handler type is not stream`);
+    if (directory.page?.handlerType !== 'stream') {
+        fastify.log.error(`[ERROR] Critical error while creating stream '${directory.uri}' page.`);
         return;
     }
 
     fastify.route({
-        method: info.page.method,
-        url: info.uri,
+        method: directory.page.method,
+        url: directory.uri,
         handler: async (request, reply) => {
             const readableStream = new Readable();
             readableStream._read = () => {};
@@ -29,14 +29,10 @@ export const registerStreamPage = (
             let hasEndedStream = false;
             let totalBytes = 0;
 
-            await (info.page!.handler as PageStream)({
+            await (directory.page!.handler as PageStream)({
                 set: (options) => {
-                    if (hasEndedStream) {
-                        fastify.log.warn(`[WARN] Cannot set headers after connection has ended.`);
-                        return;
-                    }
-                    if (isStreaming) {
-                        fastify.log.warn(`[WARN] Stream options are only applicable with the first invocation of 'stream'.`);
+                    if (isStreaming || hasEndedStream) {
+                        fastify.log.warn(`[ERROR] Stream can only be set before or during the first invocation of 'stream'.`);
                         return;
                     }
 
@@ -56,7 +52,7 @@ export const registerStreamPage = (
                 },
                 stream: (payload, options) => {
                     if (hasEndedStream) {
-                        fastify.log.warn(`[WARN] Cannot stream data after connection has ended.`);
+                        fastify.log.warn(`[ERROR] Cannot stream data after connection has ended.`);
                         return;
                     }
                     if (isStreaming && options) {
@@ -116,5 +112,5 @@ export const registerStreamPage = (
         }
     });
 
-    fastify.log.debug(`Router_PageRoute(Stream)=${info.uri}`);
+    fastify.log.debug(`Router_PageRoute(Stream)=${directory.uri}`);
 }

@@ -8,7 +8,7 @@ import type {
     PageCallbackOptions,
 } from "~/stack/types.ts";
 
-const applyOptions = (
+export const applyOptions = (
     fastify: FastifyInstance,
     response: PageResponse,
     payload: string | Record<any, any>,
@@ -31,12 +31,12 @@ const applyOptions = (
     return response;
 }
 
-const wrapPage = (
+export const wrapPage = (
     req: FastifyRequest,
     res: FastifyReply,
     type: string,
     page: string,
-    layout?: LayoutSync | null
+    layout: LayoutSync | null
 ): string => {
     return layout && type.startsWith('text')
         ? layout({ page, req, res })
@@ -45,21 +45,21 @@ const wrapPage = (
 
 export const registerSyncPage = (
     fastify: FastifyInstance,
-    info: Directory,
+    directory: Directory,
     layoutHandler: LayoutSync | null,
 ) => {
-    if (info.page?.handlerType !== 'sync') {
-        fastify.log.error(`[ERROR] Page handler type is not synchronous`);
+    if (directory.page?.handlerType !== 'sync') {
+        fastify.log.error(`[ERROR] Critical error while creating '${directory.uri}' page.`);
         return;
     }
-    if (info.layout && info.layout.handlerType !== 'sync') {
-        fastify.log.error(`[ERROR] Cannot create route for '${info.uri}'. Change the Layout to be synchronous or change the Page to be asynchronous`);
+    if (directory.layout && directory.layout.handlerType !== 'sync') {
+        fastify.log.error(`[ERROR] Cannot create '${directory.uri}'. Pages must be async when their Layout is async.`);
         return;
     }
 
     fastify.route({
-        method: info.page.method,
-        url: info.uri,
+        method: directory.page.method,
+        url: directory.uri,
         handler: (request, reply) => {
             const response: PageResponse = {
                 status: 200,
@@ -73,7 +73,7 @@ export const registerSyncPage = (
 
             let hasSent = false;
 
-            (info.page!.handler as PageSync)({
+            (directory.page!.handler as PageSync)({
                 send: (payload, options) => {
                     if (hasSent) {
                         fastify.log.warn(`[ERROR] Cannot send response multiple times.`);
@@ -132,5 +132,5 @@ export const registerSyncPage = (
         }
     });
 
-    fastify.log.debug(`Router_PageRoute(Sync)=${info.uri}`);
+    fastify.log.debug(`Router_PageRoute(Sync)=${directory.uri}`);
 }
