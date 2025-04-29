@@ -1,6 +1,6 @@
 import type { PageSync } from "~/stack/types.ts";
 
-export const page: PageSync = async ({ send }) => {
+export const page: PageSync = ({ send }) => {
     return send(`
         <!DOCTYPE html>
         <html lang="en">

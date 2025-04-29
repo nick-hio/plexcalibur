@@ -30,6 +30,8 @@ export const registerStreamPage = (
             let totalBytes = 0;
 
             await (directory.page!.handler as PageStream)({
+                req: request,
+                res: reply,
                 set: (options) => {
                     if (isStreaming || hasEndedStream) {
                         fastify.log.warn(`[ERROR] Stream can only be set before or during the first invocation of 'stream'.`);
@@ -101,16 +103,16 @@ export const registerStreamPage = (
                         fastify.log.debug(`Stream ended after ${totalBytes} bytes of data`);
                     }
                 },
-                req: request,
-                res: reply,
             });
 
             if (isStreaming && !hasEndedStream) {
                 readableStream.push(null);
                 fastify.log.debug(`Stream ended after ${totalBytes} bytes of data`);
             }
-        }
+
+            return reply;
+        },
     });
 
-    fastify.log.debug(`Router_PageRoute(Stream)=${directory.uri}`);
+    fastify.log.debug(`Router_PgeRoute='${directory.uri}' (Stream)`);
 }

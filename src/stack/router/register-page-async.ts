@@ -65,7 +65,6 @@ export const registerAsyncPage = (
                         },
                     });
 
-                    // const content = await wrapPage(request, reply, response.type, response.content, layoutHandler);
                     const content = await wrapPage(request, reply, {
                         type: response.type,
                         page: response.content,
@@ -90,7 +89,6 @@ export const registerAsyncPage = (
                         },
                     });
 
-                    // const content = await wrapPage(request, reply, response.type, response.content, layoutHandler);
                     const content = await wrapPage(request, reply, {
                         type: response.type,
                         page: response.content,
@@ -113,7 +111,6 @@ export const registerAsyncPage = (
             }
 
             // Success response
-            // const content = await wrapPage(request, reply, response.type, response.content, layoutHandler);
             const content = await wrapPage(request, reply, {
                 type: response.type,
                 page: response.content,
@@ -124,5 +121,5 @@ export const registerAsyncPage = (
         }
     });
 
-    fastify.log.debug(`Router_PageRoute(Async)=${directory.uri}`);
+    fastify.log.debug(`Router_PgeRoute='${directory.uri}' (Async)`);
 }

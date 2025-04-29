@@ -152,5 +152,5 @@ export const registerSyncPage = (
         }
     });
 
-    fastify.log.debug(`Router_PageRoute(Sync)=${directory.uri}`);
+    fastify.log.debug(`Router_PgeRoute='${directory.uri}' (Sync)`);
 }

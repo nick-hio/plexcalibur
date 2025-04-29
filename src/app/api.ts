@@ -1,32 +1,32 @@
-import type { ApiObject } from "~/stack/types.ts";
+import type { Api } from "~/stack/types.ts";
 
-export const api: ApiObject[] = [
+export const api: Api[] = [
     {
         path: '/get',
         method: 'GET',
-        handler: async (req, res) => {
-            return res.send('GET /get');
+        handler: async ({ stream }) => {
+            stream('GET /api/get');
         },
     },
     {
         path: '/add',
         method: 'POST',
-        handler: async (req, res) => {
-            return res.code(201).send('POST /add');
+        handler: async ({ stream }) => {
+            stream('POST /api/add');
         },
     },
     {
         path: '/update/:id',
         method: 'PUT',
-        handler: async (req, res) => {
-            return res.send('POST /update/:id');
+        handler: async ({ stream }) => {
+            stream('POST /api/update/:id');
         },
     },
     {
         path: '/delete/:id',
         method: 'DELETE',
-        handler: async (req, res) => {
-            return res.send('DELETE /delete/:id');
+        handler: async ({ stream }) => {
+            stream('DELETE /api/delete/:id');
         },
     }
 ];

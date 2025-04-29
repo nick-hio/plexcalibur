@@ -1,4 +1,4 @@
-import type { FastifyPluginOptions, HTTPMethods, RouteHandlerMethod } from "fastify";
+import type { FastifyPluginOptions, HTTPMethods } from "fastify";
 import type { FastifyRequest, FastifyReply } from "fastify";
 
 export interface Directory {
@@ -177,15 +177,30 @@ export type PageModule =
  * ~~~ API Types ~~~
  */
 
-export type ApiObject<
-    H = RouteHandlerMethod,
-> = {
+export type ApiStream<
+    Req = FastifyRequest,
+    Res = FastifyReply,
+> = ({
+    set,
+    stream,
+    end,
+    req,
+    res,
+}: {
+    set: (options: StreamCallbackOptions) => void,
+    stream: (payload: string | Record<any, any>, options?: StreamCallbackOptions) => void,
+    end: (payload?: string | Record<any, any>) => void,
+    req: Req,
+    res: Res,
+}) => Promise<void>;
+
+export type Api = {
     path: string,
     method: HTTPMethods,
-    handler: H,
+    handler: ApiStream,
 }
 
 /** Module from an `api.ts` file. */
 export type ApiModule = {
-    endpoints: ApiObject[],
+    endpoints: Api[],
 }

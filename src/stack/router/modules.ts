@@ -1,6 +1,6 @@
 import type {
     ApiModule,
-    ApiObject,
+    Api,
     Layout,
     LayoutModule,
     PageAsync,
@@ -147,18 +147,18 @@ export const getApiFromModule = (obj: unknown): ApiModule | null => {
     }
 
     const result: {
-        endpoints: ApiObject | ApiObject[],
+        endpoints: Api | Api[],
     } = {
         endpoints: [],
     }
 
     // exported default array
     if ('default' in obj && obj['default']) {
-        result.endpoints = obj['default'] as ApiObject | ApiObject[];
+        result.endpoints = obj['default'] as Api | Api[];
     }
     // exported `api` array
     else if ('api' in obj && obj['api']) {
-        result.endpoints = obj['api'] as ApiObject | ApiObject[];
+        result.endpoints = obj['api'] as Api | Api[];
     }
     // no exports
     else {
@@ -173,7 +173,7 @@ export const getApiFromModule = (obj: unknown): ApiModule | null => {
         result.endpoints = [result.endpoints];
     }
 
-    const filtered: ApiObject[] = result.endpoints.reduce<ApiObject[]>((acc, route) => {
+    const filtered: Api[] = result.endpoints.reduce<Api[]>((acc, route) => {
         if (!route || typeof route !== 'object' || !('path' in route) || !('handler' in route)
             || typeof route['path'] !== 'string' || typeof route['handler'] !== 'function') {
             return acc;
@@ -182,7 +182,7 @@ export const getApiFromModule = (obj: unknown): ApiModule | null => {
         acc.push({
             path: route['path'],
             method: ('method' in route && typeof route['method'] === 'string') ? route['method'] : 'GET',
-            handler: route['handler'] as (req: any, reply: any) => any
+            handler: route['handler'],
         });
 
         return acc;
