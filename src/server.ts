@@ -1,6 +1,6 @@
 import { env } from '~/utils/env.ts';
 import Fastify from "fastify";
-import fastifyRateLimiter from "~/stack/rate-limiter.ts";
+import fastifyRateLimiter from "~/stack/rate-limiter/rate-limiter.ts";
 import fastifyForm from "@fastify/formbody";
 import fastifyHelmet from "@fastify/helmet";
 import fastifyCors from "@fastify/cors";
