@@ -9,13 +9,16 @@ import { applyOptions } from './register-page-sync.ts';
 const wrapPage = async (
     req: FastifyRequest,
     res: FastifyReply,
-    type: string,
-    page: string,
-    layout: LayoutSync | LayoutAsync | null
+    options: {
+        type: string,
+        page: string,
+        layout: LayoutSync | LayoutAsync | null,
+        useLayout: boolean,
+    },
 ): Promise<string> => {
-    return layout && type.startsWith('text')
-        ? await layout({ page, req, res })
-        : page;
+    return options.useLayout && options.layout && options.type.startsWith('text')
+        ? await options.layout({ page: options.page, req, res })
+        : options.page;
 }
 
 export const registerAsyncPage = (
@@ -40,6 +43,7 @@ export const registerAsyncPage = (
                 type: 'text/html',
                 content: '',
                 encoding: 'utf-8',
+                useLayout: true,
             }
 
             let hasSent = false;
@@ -61,7 +65,13 @@ export const registerAsyncPage = (
                         },
                     });
 
-                    const content = await wrapPage(request, reply, response.type, response.content, layoutHandler);
+                    // const content = await wrapPage(request, reply, response.type, response.content, layoutHandler);
+                    const content = await wrapPage(request, reply, {
+                        type: response.type,
+                        page: response.content,
+                        layout: layoutHandler,
+                        useLayout: response.useLayout,
+                    });
                     reply.code(response.status).headers(response.headers).send(content);
 
                     hasSent = true;
@@ -80,7 +90,13 @@ export const registerAsyncPage = (
                         },
                     });
 
-                    const content = await wrapPage(request, reply, response.type, response.content, layoutHandler);
+                    // const content = await wrapPage(request, reply, response.type, response.content, layoutHandler);
+                    const content = await wrapPage(request, reply, {
+                        type: response.type,
+                        page: response.content,
+                        layout: layoutHandler,
+                        useLayout: response.useLayout,
+                    });
                     reply.code(response.status).headers(response.headers).send(content);
 
                     hasSent = true;
@@ -97,7 +113,13 @@ export const registerAsyncPage = (
             }
 
             // Success response
-            const content = await wrapPage(request, reply, response.type, response.content, layoutHandler);
+            // const content = await wrapPage(request, reply, response.type, response.content, layoutHandler);
+            const content = await wrapPage(request, reply, {
+                type: response.type,
+                page: response.content,
+                layout: layoutHandler,
+                useLayout: response.useLayout,
+            });
             return reply.code(response.status).headers(response.headers).send(content);
         }
     });

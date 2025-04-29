@@ -77,6 +77,7 @@ export type PageResponse = {
     type: string,
     content: string,
     encoding: BufferEncoding,
+    useLayout: boolean,
 }
 
 export type PageCallbackOptions = {
@@ -84,6 +85,7 @@ export type PageCallbackOptions = {
     type?: string,
     headers?: Record<string, string>,
     encoding?: BufferEncoding,
+    useLayout?: boolean,
 }
 
 export type PageSync<

@@ -1,7 +1,7 @@
 import type { PageAsync } from "~/stack/types.ts";
 
 export const page: PageAsync = async ({ send }) => {
-    send({
+    await send({
         title: 'JSON Page',
         description: 'This is a JSON page.',
         content: {

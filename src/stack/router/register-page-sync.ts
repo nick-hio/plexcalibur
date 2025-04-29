@@ -26,6 +26,7 @@ export const applyOptions = (
         'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
         ...options?.headers,
     };
+    response.useLayout = options?.useLayout ?? true;
     response.content = transformPayload(fastify, payload, response, options?.type);
 
     return response;
@@ -34,13 +35,16 @@ export const applyOptions = (
 export const wrapPage = (
     req: FastifyRequest,
     res: FastifyReply,
-    type: string,
-    page: string,
-    layout: LayoutSync | null
+    options: {
+        type: string,
+        page: string,
+        layout: LayoutSync | null,
+        useLayout: boolean,
+    },
 ): string => {
-    return layout && type.startsWith('text')
-        ? layout({ page, req, res })
-        : page;
+    return options.useLayout && options.layout && options.type.startsWith('text')
+        ? options.layout({ page: options.page, req, res })
+        : options.page;
 }
 
 export const registerSyncPage = (
@@ -68,7 +72,8 @@ export const registerSyncPage = (
                 },
                 type: 'text/html',
                 content: '',
-                encoding: 'utf-8'
+                encoding: 'utf-8',
+                useLayout: true,
             };
 
             let hasSent = false;
@@ -88,7 +93,12 @@ export const registerSyncPage = (
                         },
                     });
 
-                    const content = wrapPage(request, reply, response.type, response.content, layoutHandler);
+                    const content = wrapPage(request, reply, {
+                        type: response.type,
+                        page: response.content,
+                        layout: layoutHandler,
+                        useLayout: response.useLayout,
+                    });
                     reply.code(response.status).headers(response.headers).send(content);
 
                     hasSent = true;
@@ -107,7 +117,12 @@ export const registerSyncPage = (
                         },
                     });
 
-                    const content = wrapPage(request, reply, response.type, response.content, layoutHandler);
+                    const content = wrapPage(request, reply, {
+                        type: response.type,
+                        page: response.content,
+                        layout: layoutHandler,
+                        useLayout: response.useLayout,
+                    });
                     reply.code(response.status).headers(response.headers).send(content);
 
                     hasSent = true;
@@ -127,7 +142,12 @@ export const registerSyncPage = (
             }
 
             // Success response
-            const content = wrapPage(request, reply, response.type, response.content, layoutHandler);
+            const content = wrapPage(request, reply, {
+                type: response.type,
+                page: response.content,
+                layout: layoutHandler,
+                useLayout: response.useLayout,
+            });
             reply.code(response.status).headers(response.headers).send(content);
         }
     });
