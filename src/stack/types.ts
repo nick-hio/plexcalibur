@@ -110,8 +110,8 @@ export type PageAsync<
     req,
     res,
 }: {
-    send: (payload: string | Record<any, any>, options?: PageCallbackOptions) => void,
-    error: (payload: string | Record<any, any>, options?: PageCallbackOptions) => void,
+    send: (payload: string | Record<any, any>, options?: PageCallbackOptions) => void | Promise<void>,
+    error: (payload: string | Record<any, any>, options?: PageCallbackOptions) => void | Promise<void>,
     req: Req,
     res: Res,
 }) => Promise<void>;

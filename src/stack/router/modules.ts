@@ -134,7 +134,7 @@ export const getPageFromModule = (module: unknown): PageModule | null => {
 
     // exported `method` string
     if ('method' in module && module['method'] && typeof module['method'] === 'string') {
-        result.method = module['method'].toUpperCase() as string;
+        result.method = String(module['method']).toUpperCase();
     }
 
     return result as PageModule;

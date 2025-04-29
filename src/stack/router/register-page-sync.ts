@@ -5,25 +5,41 @@ import type {
     PageSync,
     PageResponse,
     LayoutSync,
+    PageCallbackOptions,
 } from "~/stack/types.ts";
 
-const applyResponse = () => {} // TODO
+const applyOptions = (
+    fastify: FastifyInstance,
+    response: PageResponse,
+    payload: string | Record<any, any>,
+    options: PageCallbackOptions & {
+        defaults: {
+            status: number,
+            type: string,
+        }
+    },
+): PageResponse => {
+    response.status = options?.status || options.defaults.status;
+    response.type = options?.type || options.defaults.type;
+    response.encoding = options?.encoding || 'utf-8';
+    response.headers = {
+        'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
+        ...options?.headers,
+    };
+    response.content = transformPayload(fastify, payload, response, options?.type);
 
-const wrapPageSync = ({
-    req,
-    res,
-    type,
-    layoutHandler,
-    page,
-}: {
+    return response;
+}
+
+const wrapPage = (
     req: FastifyRequest,
     res: FastifyReply,
     type: string,
-    layoutHandler: LayoutSync | null,
     page: string,
-}): string => {
-    return layoutHandler && type.startsWith('text')
-        ? layoutHandler({page, req, res})
+    layout?: LayoutSync | null
+): string => {
+    return layout && type.startsWith('text')
+        ? layout({ page, req, res })
         : page;
 }
 
@@ -64,23 +80,16 @@ export const registerSyncPage = (
                         return;
                     }
 
-                    response.status = options?.status || 200;
-                    response.type = options?.type || 'text/html';
-                    response.encoding = options?.encoding || 'utf-8';
-                    response.headers = {
-                        'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
-                        ...options?.headers,
-                    };
-                    response.content = transformPayload(fastify, payload, response, options?.type);
+                    applyOptions(fastify, response, payload, {
+                        ...options,
+                        defaults: {
+                            status: 200,
+                            type: 'text/html',
+                        },
+                    });
 
-                    const wrapped = wrapPageSync({
-                        req: request,
-                        res: reply,
-                        type: response.type,
-                        layoutHandler,
-                        page: response.content,
-                    })
-                    reply.code(response.status).headers(response.headers).send(wrapped);
+                    const content = wrapPage(request, reply, response.type, response.content, layoutHandler);
+                    reply.code(response.status).headers(response.headers).send(content);
 
                     hasSent = true;
                 },
@@ -90,23 +99,16 @@ export const registerSyncPage = (
                         return;
                     }
 
-                    response.status = options?.status || 400;
-                    response.type = options?.type || 'text/plain';
-                    response.encoding = options?.encoding || 'utf-8';
-                    response.headers = {
-                        'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
-                        ...options?.headers,
-                    };
-                    response.content = transformPayload(fastify, payload, response);
+                    applyOptions(fastify, response, payload, {
+                        ...options,
+                        defaults: {
+                            status: 400,
+                            type: 'text/plain',
+                        },
+                    });
 
-                    const wrapped = wrapPageSync({
-                        req: request,
-                        res: reply,
-                        type: response.type,
-                        layoutHandler,
-                        page: response.content,
-                    })
-                    reply.code(response.status).headers(response.headers).send(wrapped);
+                    const content = wrapPage(request, reply, response.type, response.content, layoutHandler);
+                    reply.code(response.status).headers(response.headers).send(content);
 
                     hasSent = true;
                 },
@@ -125,14 +127,8 @@ export const registerSyncPage = (
             }
 
             // Success response
-            const wrapped = wrapPageSync({
-                req: request,
-                res: reply,
-                type: response.type,
-                layoutHandler,
-                page: response.content,
-            });
-            reply.code(response.status).headers(response.headers).send(wrapped);
+            const content = wrapPage(request, reply, response.type, response.content, layoutHandler);
+            reply.code(response.status).headers(response.headers).send(content);
         }
     });
 

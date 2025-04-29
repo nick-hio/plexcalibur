@@ -4,24 +4,41 @@ import type {
     Layout,
     Directory,
     PageAsync,
-    PageResponse,
+    PageResponse, PageCallbackOptions, LayoutSync,
 } from "~/stack/types.ts";
 
-const wrapPageAsync = async ({
-    req,
-    res,
-    type,
-    layoutHandler,
-    page,
-}: {
+const applyOptions = (
+    fastify: FastifyInstance,
+    response: PageResponse,
+    payload: string | Record<any, any>,
+    options: PageCallbackOptions & {
+        defaults: {
+            status: number,
+            type: string,
+        }
+    },
+): PageResponse => {
+    response.status = options?.status || options.defaults.status;
+    response.type = options?.type || options.defaults.type;
+    response.encoding = options?.encoding || 'utf-8';
+    response.headers = {
+        'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
+        ...options?.headers,
+    };
+    response.content = transformPayload(fastify, payload, response, options?.type);
+
+    return response;
+}
+
+const wrapPage = async (
     req: FastifyRequest,
     res: FastifyReply,
     type: string,
-    layoutHandler: Layout | null,
     page: string,
-}): Promise<string> => {
-    return layoutHandler && type.startsWith('text')
-        ? await layoutHandler({page, req, res})
+    layout?: Layout | null
+): Promise<string> => {
+    return layout && type.startsWith('text')
+        ? await layout({ page, req, res })
         : page;
 }
 
@@ -41,36 +58,62 @@ export const registerAsyncPage = (
         handler: async (request, reply) => {
             const response: PageResponse = {
                 status: 200,
-                headers: {},
+                headers: {
+                    'Content-Type': 'text/html; charset=utf-8',
+                },
                 type: 'text/html',
                 content: '',
                 encoding: 'utf-8',
             }
 
+            let hasSent = false;
+
             await (info.page!.handler as PageAsync)({
-                send: (payload, options) => {
-                    response.status = options?.status || 200;
-                    response.type = options?.type || 'text/html';
-                    response.encoding = options?.encoding || 'utf-8';
-                    response.headers = {
-                        'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
-                        ...options?.headers,
-                    };
-                    response.content = transformPayload(fastify, payload, response);
-                },
-                error: (payload, options) => {
-                    response.status = options?.status || 400;
-                    response.type = options?.type || 'text/plain';
-                    response.encoding = options?.encoding || 'utf-8';
-                    response.headers = {
-                        'Content-Type': `${response.type}; charset=${options?.encoding || 'utf-8'}`,
-                        ...options?.headers,
-                    };
-                    response.content = transformPayload(fastify, payload, response);
-                },
                 req: request,
                 res: reply,
+                send: async (payload, options) => {
+                    if (hasSent) {
+                        fastify.log.warn(`[ERROR] Cannot send response multiple times.`);
+                        return;
+                    }
+
+                    applyOptions(fastify, response, payload, {
+                        ...options,
+                        defaults: {
+                            status: 200,
+                            type: 'text/html',
+                        },
+                    });
+
+                    const content = await wrapPage(request, reply, response.type, response.content, layoutHandler);
+                    reply.code(response.status).headers(response.headers).send(content);
+
+                    hasSent = true;
+                },
+                error: async (payload, options) => {
+                    if (hasSent) {
+                        fastify.log.warn(`[ERROR] Cannot send response multiple times.`);
+                        return;
+                    }
+
+                    applyOptions(fastify, response, payload, {
+                        ...options,
+                        defaults: {
+                            status: 400,
+                            type: 'text/plain',
+                        },
+                    });
+
+                    const content = await wrapPage(request, reply, response.type, response.content, layoutHandler);
+                    reply.code(response.status).headers(response.headers).send(content);
+
+                    hasSent = true;
+                },
             });
+
+            if (hasSent) {
+                return reply;
+            }
 
             // Error response
             if (response.status >= 400) {
@@ -78,15 +121,8 @@ export const registerAsyncPage = (
             }
 
             // Success response
-            const payload = layoutHandler && response.type.startsWith('text')
-                ? await layoutHandler({
-                    page: response.content,
-                    req: request,
-                    res: reply
-                })
-                : response.content;
-
-            return reply.code(response.status || 200).headers(response.headers).send(payload);
+            const content = await wrapPage(request, reply, response.type, response.content, layoutHandler);
+            return reply.code(response.status).headers(response.headers).send(content);
         }
     });
 
