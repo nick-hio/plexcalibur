@@ -12,12 +12,12 @@ export const registerApi = (
 ) => {
     directory.api!.endpoints.forEach((api: Api) => {
         const uri = (directory.uri.endsWith('/') ? directory.uri : directory.uri + '/')
-            + 'api'
-            + (api.path.startsWith('/') ? '' : '/')
-            + (api.path.endsWith('/') ? api.path.slice(0, -1) : api.path);
+                + 'api'
+                + (api.path?.startsWith('/') ? '' : '/')
+                + (api.path?.endsWith('/') ? api.path?.slice(0, -1) : api.path);
 
         fastify.route({
-            method: api.method,
+            method: api.method || 'GET',
             url: uri,
             handler: async (request, reply) => {
                 const readableStream = new Readable();
@@ -118,6 +118,6 @@ export const registerApi = (
             },
         });
 
-        fastify.log.debug(`Router_ApiRoute='${uri}' (Stream)`);
+        fastify.log.debug(`Router_ApiRoute='${api.method || 'GET'} ${uri}' (Stream)`);
     });
 }

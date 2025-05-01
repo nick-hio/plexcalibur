@@ -1,11 +1,9 @@
 import type { PageSync } from "~/stack/types.ts";
 
-// export const method = 'GET'; // Optional
-
 export const page: PageSync = ({ send }) => {
-    send(`
+    return send(
         <main>
-            <h1>Home Page</h1>
+            <h1>Nested Page</h1>
         </main>
-    `);
+    );
 }

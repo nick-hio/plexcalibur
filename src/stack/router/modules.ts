@@ -1,12 +1,13 @@
 import type {
     ApiModule,
     Api,
-    Layout,
-    LayoutModule,
     PageAsync,
     PageStream,
     PageSync,
-    PageModule, LayoutAsync, LayoutSync,
+    PageModule,
+    LayoutAsync,
+    LayoutSync,
+    LayoutModule,
 } from "~/stack/types.ts";
 
 const getLayoutInfo = (handler: Function) => {
@@ -36,11 +37,11 @@ export const getLayoutFromModule = (module: unknown): LayoutModule | null => {
 
     // exported default function
     if ('default' in module && module['default'] && typeof module['default'] === 'function') {
-        result.handler = module.default as Layout;
+        result.handler = module.default as LayoutSync | LayoutAsync;
     }
     // exported `layout` function
     else if ('layout' in module && module['layout'] && typeof module['layout'] === 'function') {
-        result.handler = module.layout as Layout;
+        result.handler = module.layout as LayoutSync | LayoutAsync;
     }
     // no exports
     else {
@@ -174,13 +175,12 @@ export const getApiFromModule = (obj: unknown): ApiModule | null => {
     }
 
     const filtered: Api[] = result.endpoints.reduce<Api[]>((acc, route) => {
-        if (!route || typeof route !== 'object' || !('path' in route) || !('handler' in route)
-            || typeof route['path'] !== 'string' || typeof route['handler'] !== 'function') {
+        if (!route || typeof route === 'object' && !('handler' in route)) {
             return acc;
         }
 
         acc.push({
-            path: route['path'],
+            path: ('path' in route && typeof route['path'] === 'string') ? route['path'] : '/',
             method: ('method' in route && typeof route['method'] === 'string') ? route['method'] : 'GET',
             handler: route['handler'],
         });

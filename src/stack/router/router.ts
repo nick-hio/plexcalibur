@@ -3,9 +3,10 @@ import fp from 'fastify-plugin';
 import fs from 'fs';
 import path from 'path';
 import type {
-    Layout,
     RouterOptions,
-    Directory
+    Directory,
+    LayoutSync,
+    LayoutAsync
 } from "~/stack/types.ts";
 import {
     getLayoutFromModule,
@@ -15,7 +16,7 @@ import {
 import { registerDirectory } from './register.ts'
 
 /**
- * Registers routes from the `page.ts` and `api.ts` files from a directory and all nested-directories.
+ * Registers routes from the `page.tsx` and `api.ts` files from a directory and all nested-directories.
  * @param fastify - Fastify instance.
  * @param dir - The file system location of the directory.
  * @param uri - The URI string for the server route.
@@ -25,7 +26,7 @@ const buildRoutes = (
     fastify: FastifyInstance,
     dir: string,
     uri: string = '/',
-    layoutHandler: Layout | null = null
+    layoutHandler: LayoutSync | LayoutAsync | null = null
 ): void => {
     const directory: Directory = {
         uri: uri,

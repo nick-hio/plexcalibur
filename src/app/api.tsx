@@ -2,8 +2,18 @@ import type { Api } from "~/stack/types.ts";
 
 export const api: Api[] = [
     {
+        handler: async ({ stream }) => {
+            stream('GET /api');
+        },
+    },
+    {
+        method: 'POST',
+        handler: async ({ stream }) => {
+            stream('POST /api');
+        },
+    },
+    {
         path: '/get',
-        method: 'GET',
         handler: async ({ stream }) => {
             stream('GET /api/get');
         },

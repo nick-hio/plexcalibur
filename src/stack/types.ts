@@ -1,11 +1,16 @@
 import type { FastifyPluginOptions, HTTPMethods } from "fastify";
 import type { FastifyRequest, FastifyReply } from "fastify";
+import type { JSXElementConstructor, ReactElement } from 'react';
+
+/*
+ * ~~~ Shared Types ~~~
+ */
 
 export interface Directory {
     uri: string,
     dir: string,
     folders: string[],
-    layout: LayoutModule | null,
+    layout: LayoutModuleSync | LayoutModuleAsync | null,
     page: PageModule | null,
     api: ApiModule | null,
 }
@@ -15,69 +20,11 @@ export type RouterOptions = FastifyPluginOptions & {
     dir?: string,
 }
 
-/*
- * ~~~ Layout Types ~~~
- */
-
-export type LayoutSync<
-    Req = FastifyRequest,
-    Res = FastifyReply,
-> = ({
-    page,
-    req,
-    res,
-}: {
-    page: string,
-    req: Req,
-    res: Res,
-}) => string;
-
-export type LayoutAsync<
-    Req = FastifyRequest,
-    Res = FastifyReply,
-> = ({
-    page,
-    req,
-    res,
-}: {
-    page: string,
-    req: Req,
-    res: Res,
-}) => Promise<string>;
-
-export type Layout =
-    | LayoutSync
-    | LayoutAsync;
-
-export type LayoutModuleSync = {
-    handler: LayoutSync | null,
-    handlerType: 'sync',
-}
-
-export type LayoutModuleAsync = {
-    handler: Layout | null,
-    handlerType: 'async',
-}
-
-/** Module from a `layout.ts` file. */
-export type LayoutModule =
-    | LayoutModuleSync
-    | LayoutModuleAsync;
-
-/*
- * ~~~ Page Types ~~~
- */
-
-export type PageType = 'sync' | 'async' | 'stream';
-
-/** Utility type. */
-export type PageResponse = {
-    status: number,
-    headers: Record<string, string>,
-    type: string,
-    content: string,
-    encoding: BufferEncoding,
-    useLayout: boolean,
+export type StreamCallbackOptions = {
+    status?: number,
+    type?: string,
+    headers?: Record<string, string>,
+    encoding?: BufferEncoding,
 }
 
 export type PageCallbackOptions = {
@@ -88,45 +35,107 @@ export type PageCallbackOptions = {
     useLayout?: boolean,
 }
 
-export type PageSync<
+/*
+ * ~~~ Layout Types ~~~
+ */
+
+export type LayoutSync<
     Req = FastifyRequest,
     Res = FastifyReply,
 > = ({
+    Page,
+    req,
+    res,
+}: {
+    Page: JSXElementConstructor<any>,
+    req: Req,
+    res: Res,
+}) => ReactElement;
+
+export type LayoutAsync<
+    Req = FastifyRequest,
+    Res = FastifyReply,
+> = ({
+    Page,
+    req,
+    res,
+}: {
+    Page: JSXElementConstructor<any>,
+    req: Req,
+    res: Res,
+}) => Promise<ReactElement>;
+
+export type LayoutModuleSync = {
+    handler: LayoutSync,
+    handlerType: 'sync',
+}
+
+export type LayoutModuleAsync = {
+    handler: LayoutAsync,
+    handlerType: 'async',
+}
+
+/** Module from a `layout.tsx` file. */
+export type LayoutModule =
+    | LayoutModuleSync
+    | LayoutModuleAsync;
+
+/*
+ * ~~~ Page Types ~~~
+ */
+
+export type PageContext = {
+    status: number,
+    headers: Record<string, string>,
+    type: string,
+    content: string | Record<any, any> | ReactElement,
+    encoding: BufferEncoding,
+    useLayout: boolean,
+}
+
+export type StreamContext = {
+    type: string,
+    headers: Record<string, string>,
+    encoding: BufferEncoding,
+}
+
+export type PageSync<
+    Q = FastifyRequest,
+    S = FastifyReply,
+> = ({
+    set,
     send,
     error,
     req,
     res,
 }: {
-    send: (payload: string | Record<any, any>, options?: PageCallbackOptions) => void,
-    error: (payload: string | Record<any, any>, options?: PageCallbackOptions) => void,
-    req: Req,
-    res: Res,
+    set: (options: PageCallbackOptions) => void,
+    send: (payload: string | Record<any, any> | JSXElementConstructor<any>, options?: PageCallbackOptions) => void,
+    error: (payload: string | Record<any, any> | JSXElementConstructor<any>, options?: PageCallbackOptions) => void,
+    req: Q,
+    res: S,
 }) => void;
 
 export type PageAsync<
-    Req = FastifyRequest,
-    Res = FastifyReply,
+    Q = FastifyRequest,
+    S = FastifyReply,
 > = ({
+    set,
     send,
     error,
     req,
     res,
 }: {
-    send: (payload: string | Record<any, any>, options?: PageCallbackOptions) => Promise<void>,
-    error: (payload: string | Record<any, any>, options?: PageCallbackOptions) => Promise<void>,
-    req: Req,
-    res: Res,
+    set: (options: PageCallbackOptions) => void,
+    send: (payload: string | Record<any, any> | JSXElementConstructor<any>, options?: PageCallbackOptions) => Promise<void>,
+    error: (payload: string | Record<any, any> | JSXElementConstructor<any>, options?: PageCallbackOptions) => Promise<void>,
+    req: Q,
+    res: S,
 }) => Promise<void>;
 
-export type StreamCallbackOptions = {
-    type?: string,
-    headers?: Record<string, string>,
-    encoding?: BufferEncoding,
-}
-
 export type PageStream<
-    Req = FastifyRequest,
-    Res = FastifyReply,
+    Q = FastifyRequest,
+    S = FastifyReply,
 > = ({
     set,
     stream,
@@ -135,19 +144,11 @@ export type PageStream<
     res,
 }: {
     set: (options: StreamCallbackOptions) => void,
-    stream: (payload: string | Record<any, any>, options?: StreamCallbackOptions) => void,
-    end: (payload?: string | Record<any, any>) => void,
-    req: Req,
-    res: Res,
+    stream: (payload: string | Record<any, any> | JSXElementConstructor<any>, options?: StreamCallbackOptions) => void,
+    end: (payload?: string | Record<any, any> | JSXElementConstructor<any>) => void,
+    req: Q,
+    res: S,
 }) => Promise<void>;
-
-export type Page<
-    Req = FastifyRequest,
-    Res = FastifyReply,
-> =
-    | PageSync<Req, Res>
-    | PageAsync<Req, Res>
-    | PageStream<Req, Res>;
 
 export type PageModuleSync = {
     method: HTTPMethods,
@@ -167,7 +168,7 @@ export type PageModuleStream = {
     handler: PageStream,
 }
 
-/** Module properties from an `page.ts` file. */
+/** Module properties from an `page.tsx` file. */
 export type PageModule =
     | PageModuleSync
     | PageModuleAsync
@@ -178,8 +179,8 @@ export type PageModule =
  */
 
 export type ApiStream<
-    Req = FastifyRequest,
-    Res = FastifyReply,
+    Q = FastifyRequest,
+    S = FastifyReply,
 > = ({
     set,
     stream,
@@ -188,15 +189,15 @@ export type ApiStream<
     res,
 }: {
     set: (options: StreamCallbackOptions) => void,
-    stream: (payload: string | Record<any, any>, options?: StreamCallbackOptions) => void,
-    end: (payload?: string | Record<any, any>) => void,
-    req: Req,
-    res: Res,
+    stream: (payload: string | Record<any, any> | JSXElementConstructor<any>, options?: StreamCallbackOptions) => void,
+    end: (payload?: string | Record<any, any> | JSXElementConstructor<any>) => void,
+    req: Q,
+    res: S,
 }) => Promise<void>;
 
 export type Api = {
-    path: string,
-    method: HTTPMethods,
+    path?: string,
+    method?: HTTPMethods,
     handler: ApiStream,
 }
 

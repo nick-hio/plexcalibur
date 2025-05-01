@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { Directory, PageStream, StreamCallbackOptions } from "~/stack/types.ts";
+import type { Directory, PageStream, StreamContext } from "~/stack/types.ts";
 import { transformStream } from "./transform.ts";
 import { Readable } from "stream";
 
@@ -19,7 +19,7 @@ export const registerStreamPage = (
             const readableStream = new Readable();
             readableStream._read = () => {};
 
-            const response: StreamCallbackOptions = {
+            const response: StreamContext = {
                 type: 'text/html',
                 headers: {},
                 encoding: 'utf-8',
@@ -114,5 +114,5 @@ export const registerStreamPage = (
         },
     });
 
-    fastify.log.debug(`Router_PgeRoute='${directory.uri}' (Stream)`);
+    fastify.log.debug(`Router_PgeRoute='${directory.page.method} ${directory.uri}' (Stream)`);
 }

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
-import type { Layout, Directory, LayoutSync } from "~/stack/types.ts";
-import { registerSyncPage } from "./register-page-sync.ts";
-import { registerAsyncPage} from "./register-page-async.ts";
+import type { Directory, LayoutSync, LayoutAsync } from "~/stack/types.ts";
+import { registerSyncPage } from "./register-page-sync.tsx";
+import { registerAsyncPage} from "./register-page-async.tsx";
 import { registerStreamPage } from "./register-page-stream.ts";
 import { registerApi } from "./register-api.ts";
 
@@ -9,7 +9,7 @@ import { registerApi } from "./register-api.ts";
 export const registerDirectory = (
     fastify: FastifyInstance,
     directory: Directory,
-    layout: Layout | null = null,
+    layout: LayoutSync | LayoutAsync | null = null,
 ): void => {
     const layoutHandler = directory.layout?.handler ?? layout;
 
