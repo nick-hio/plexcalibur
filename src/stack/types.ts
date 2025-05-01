@@ -201,7 +201,7 @@ export type Api = {
     handler: ApiStream,
 }
 
-/** Module from an `api.ts` file. */
+/** Module from an `api.tsx` file. */
 export type ApiModule = {
     endpoints: Api[],
 }

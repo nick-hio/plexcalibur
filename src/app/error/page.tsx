@@ -7,10 +7,10 @@ export const page: PageAsync = async ({ send, error }) => {
         });
     }
 
-    await send(`
+    await send(
         <main>
             <h1>Error Page</h1>
             <p>No error, congrats!</p>
         </main>
-    `);
+    );
 }

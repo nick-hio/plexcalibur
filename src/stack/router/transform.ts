@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { PageContext } from "~/stack/types.ts";
 import { safeTry } from "~/utils";
 import fastJson from "fast-json-stringify";
-import { isValidElement, createElement } from "react";
+import { isValidElement } from "react";
 import { renderToStaticMarkup as render } from "react-dom/server";
 
 const jsonSchema = {} as const;
@@ -14,8 +14,8 @@ export const transformPayload = (
     context: PageContext,
 ): string => {
     const encoding = context.encoding || 'utf-8';
-    let responseBody = '';
     let contentType = context.type;
+    let responseBody;
 
     if (payload == null) { // Handles null and undefined
         responseBody = '';

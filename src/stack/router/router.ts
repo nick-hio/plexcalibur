@@ -16,7 +16,7 @@ import {
 import { registerDirectory } from './register.ts'
 
 /**
- * Registers routes from the `page.tsx` and `api.ts` files from a directory and all nested-directories.
+ * Registers routes from the `page.tsx` and `api.tsx` files from a directory and all nested-directories.
  * @param fastify - Fastify instance.
  * @param dir - The file system location of the directory.
  * @param uri - The URI string for the server route.
